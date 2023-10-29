@@ -1,0 +1,175 @@
+---
+title: "420-hw1"
+author: "Ting Wang"
+date: "2023-10-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(quantmod)
+library(xts)
+```
+
+## problem 1
+```{r}
+msft.data <- getSymbols("MSFT", auto.assign=FALSE, 
+    from="2022-01-01", to="2023-10-01")
+msft.prices <- msft.data$MSFT.Adjusted
+```
+
+### 1-(a)
+```{r}
+start_price <- coredata(msft.prices["2022-08-01"])
+end_price <- coredata(msft.prices["2022-09-01"])
+arithmetic_return <- na.omit((end_price - start_price) /start_price)
+log_return <-log(1+arithmetic_return)
+colnames(arithmetic_return) <- "Arithmetic Return"
+colnames(log_return) <- "Log Return"
+arithmetic_return
+log_return
+```
+### 1- (b)
+```{r}
+daily_price <- msft.prices["2022-01-03::2023-09-29"]
+dates <- index(daily_price)
+dailyprices <- c(daily_price)
+dailyprices_xts <- xts(dailyprices,order.by = dates)
+a_dailyreturn <- diff(dailyprices_xts) /lag(dailyprices_xts)
+arithmetic_return_msft <- na.omit(a_dailyreturn)
+
+plot(arithmetic_return_msft)
+arithmetic_return_msft
+```
+### 1-(c)
+```{r}
+log_dailyreturn_msft <- na.omit(log(1+arithmetic_return_msft))
+
+plot(log_dailyreturn_msft)
+log_dailyreturn_msft
+```
+
+
+## Problem 2
+### 2 - (a)
+```{r}
+msft.data <- getSymbols("MSFT", auto.assign=FALSE, 
+    from="2022-01-01", to="2023-10-01")
+msft.prices <- msft.data$MSFT.Adjusted
+start_price_msft <- coredata(msft.prices["2022-01-03"])
+end_price_msft <- coredata(msft.prices["2023-09-29"])
+
+aapl.data <- getSymbols("AAPL", auto.assign=FALSE, 
+    from="2022-01-01", to="2023-10-01")
+aapl.prices <- aapl.data$AAPL.Adjusted
+start_price_aapl <- coredata(aapl.prices["2022-01-03"])
+end_price_appl <- coredata(aapl.prices["2023-09-29"])
+
+
+# Buy and Hold Strategy
+w.m <- 0.3
+w.a <- 0.7
+msft_change <- (end_price_msft - start_price_msft) / start_price_msft
+aapl_change <- (end_price_appl - start_price_aapl) / start_price_aapl
+
+port_change <- w.m*msft_change + w.a*aapl_change
+
+log_return <- na.omit(log(port_change +1))
+colnames(port_change) <- "Portfolio Arithmetic Rerturn"
+colnames(log_return) <- "Portfolio Arithmetic Return"
+port_change
+log_return
+```
+
+### 2-(b)
+```{r}
+# Suppose we invest 1000 dollars
+inv<- 1000
+units_msft <- 300/coredata(msft.prices["2022-01-03"])
+units_aapl <- 700/coredata(aapl.prices["2022-01-03"])
+
+# caculate the portfolio value at 2023-01-03
+msft_23 <- units_msft * coredata(msft.prices["2023-01-03"])
+aapl_23 <- units_aapl * coredata(aapl.prices["2023-01-03"])
+port_2023 <- msft_23+aapl_23
+
+# Rebalance
+rebalance_msft <- (port_2023 * 0.3) / coredata(msft.prices["2023-01-03"])
+rebalance_aapl <- (port_2023 * 0.7) / coredata(aapl.prices["2023-01-03"])
+
+# calculate the portfolio value at 2023-09-29
+msft_new <- rebalance_msft * coredata(msft.prices["2023-09-29"])
+aapl_new <- rebalance_aapl * coredata(aapl.prices["2023-09-29"])
+port_new <- msft_new+aapl_new
+
+# arithmetic return
+ari2 <- (port_new - inv)/ inv
+colnames(ari2) <- "Arithmetic Return"
+# log return
+log2<- log(ari2+1)
+colnames(log2) <- "Log Return"
+
+ari2
+log2
+
+```
+### 2-(c)
+```{r}
+# Suppose we invest 1000 dollars
+inv<- 1000
+units_msft <- 300/coredata(msft.prices["2022-01-03"])
+units_aapl <- 700/coredata(aapl.prices["2022-01-03"])
+
+# caculate the portfolio value at 2023-01-03
+msft_23 <- units_msft * coredata(msft.prices["2023-01-03"])
+aapl_23 <- units_aapl * coredata(aapl.prices["2023-01-03"])
+port_2023 <- msft_23+aapl_23
+
+# Rebalance
+rebalance_msft <- (port_2023 * 0.5) / coredata(msft.prices["2023-01-03"])
+rebalance_aapl <- (port_2023 * 0.5) / coredata(aapl.prices["2023-01-03"])
+
+# calculate the portfolio value at 2023-09-29
+msft_new <- rebalance_msft * coredata(msft.prices["2023-09-29"])
+aapl_new <- rebalance_aapl * coredata(aapl.prices["2023-09-29"])
+port_new <- msft_new+aapl_new
+
+# arithmetic return
+ari3 <- (port_new - inv)/ inv
+colnames(ari3) <- "Arithmetic Return"
+# log return
+log3<- log(ari3+1)
+colnames(log3) <- "Log Return"
+
+ari3
+log3
+```
+
+
+
+
+## Problem 3
+```{r}
+Pt <- c(100,110,85,90,95,110)
+Dt <- c(0,0,20,0,30,0)
+t <- c(0,1,2,3,4,5)
+P_adj <- c(0,0,0,0,0,0)
+D0 = 0
+P_adj <- Pt-Dt
+index = 1
+for (t in 0:5) {
+  if (t == 0) {
+    D0 = D0 +t
+  }
+  P_adj[index] <- Pt[index] +D0
+  index = index +1
+} 
+P_adjusted <- P_adj-sum(Dt)
+P_adjusted
+
+```
+
+
+
+
+
