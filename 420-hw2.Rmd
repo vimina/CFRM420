@@ -1,0 +1,115 @@
+---
+title: "420-hw2"
+author: "Ting Wang"
+output: html_document
+date: "2023-10-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(MASS)
+library(mvtnorm)
+```
+
+# Problem 1 - a
+```{r}
+sigma_R1 <- 0.03
+sigma_R2 <- 0.02
+cov <- function(rho) {
+  matrix(c(sigma_R1^2, rho*sigma_R1*sigma_R2, rho*sigma_R1*sigma_R2, sigma_R2^2), ncol = 2)
+}
+
+corr <- function(rho) {
+  matrix(c(1,rho,rho,1), ncol = 2)
+}
+cov
+corr
+```
+
+# Problem 1-b
+```{r}
+# Expectation of the portfolio
+E_Rtotal <- 0+0
+E_Rtotal
+```
+
+```{r}
+rhos <- seq(-1,1,by=0.01)
+vars <- sigma_R1^2 + sigma_R2^2 + 2*rhos*sigma_R1*sigma_R2
+vola <- sqrt(vars)
+plot(rhos, vola, type = 'l',xlab = "correlation - rho", ylab = "volatility - sigma", main = "The volatility sigma as a function of correlation - rho")
+```
+
+
+# Problem 1-c
+Based on the plot we have, I think it is better to have a lower correlation between $R_1$ and $R_2$, because we can use the volatility will be lower if the correlation is lower in the plot, such as the volatility is less than 0.005 when corrlation is -1. 
+
+
+In the follwing, set $\rho$ = 0.5
+# Problem 1-d
+```{r}
+rho <- 0.5
+var_R <- function(rho) {
+  return(sigma_R1^2 + sigma_R2^2 + 2*rho*sigma_R1*sigma_R2)
+}
+
+sigma <- sqrt(var_R(0.5))
+sigma
+
+mu <- E_Rtotal
+mu
+```
+
+# problem 1-f
+The distribution of $L^{total}$ is the same as the distribution of R.
+```{r}
+mu_L <- -mu
+sigma_L <- -sigma
+var_L <- (-sigma)^2
+mu_L
+sigma_L
+var_L
+```
+
+# Problem 1-g
+```{r}
+mu_return <- c(0,0)
+rho <- 0.5
+cov_R <- cov(0.5)
+# suppose we calculate 1000 days
+return_R <- mvrnorm(1000, mu = mu_return, Sigma = cov_R)
+
+loss_L <- -return_R
+
+portfolio_L <- 500*loss_L[,1] + 1000*loss_L[,2]
+var <- quantile(portfolio_L,0.01)
+var
+```
+
+
+# Problem 1-h
+```{r}
+mu_R <- c(0,0)
+sigma_R <- c(0.03,0.02)
+rho <- 0.5
+P <- pmvnorm(lower = c(-Inf, -Inf), upper=c(-1,-1), mean = mu_R, sigma = cov(0.5))
+union <- pnorm(-1,mu_R[1],sigma_R[1]) + pnorm(-1,mu_R[2]+sigma_R[2]) - P
+union
+```
+I do not think this is a serious concern in the example, because the probability is not very high, around 15.386%. In this way, we could know that the return below -1 is not happen often. 
+
+# Problem 3-b
+
+# Problem 3-b
+```{r}
+pnorm(0.25) - pnorm(-0.4167)
+```
+
+
+```{r}
+pt(0.1941, df=5) - pt(-0.3416, df=5) 
+
+```
+
+
