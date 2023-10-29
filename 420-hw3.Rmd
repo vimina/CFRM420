@@ -1,0 +1,247 @@
+---
+title: "420-homework3"
+author: "Ting Wang"
+date: "2023-10-26"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(xts)
+library(quantmod)
+library(PerformanceAnalytics)
+```
+
+### Problem 1
+```{r}
+library(quantmod)
+library(PerformanceAnalytics)
+bond.data <- getSymbols("BLV", auto.assign=FALSE, from="2010-01-01",
+to="2023-10-01")$BLV.Adjusted
+bond.daily.return <- na.omit(Return.calculate(bond.data, method="log"))
+bond.monthly.return <- na.omit(Return.calculate(to.monthly(bond.data, OHLC=FALSE),method="log"))
+```
+
+### 1-a
+```{r}
+# calculate the daily returns
+daily.mean <- mean(bond.daily.return)
+daily.var <- var(bond.daily.return)
+daily.skew <- skewness(bond.daily.return)
+daily.kurt <- (mean((bond.daily.return - daily.mean)^4)) / (daily.var^2)
+
+# calculate the monthly returns
+monthly.mean <- mean(bond.monthly.return)
+monthly.var <- var(bond.monthly.return)
+monthly.skew <- skewness(bond.monthly.return)
+monthly.kurt <- (mean((bond.monthly.return - monthly.mean)^4)) / (monthly.var^2)
+
+
+# Present the results in a table
+results <- data.frame(
+  Statistic = c("Mean", "Variance", "Skewness", "Kurtosis"),
+  Daily = c(daily.mean, daily.var, daily.skew, daily.kurt),
+  Monthly = c(monthly.mean, monthly.var, monthly.skew, monthly.kurt)
+)
+
+print(results)
+```
+
+### 1-b
+```{r}
+library(ggplot2)
+daily.df <- data.frame(Date=index(bond.daily.return), Return = as.vector(bond.daily.return))
+monthly.df <- data.frame(Date=index(bond.monthly.return), Return = as.vector(bond.monthly.return))
+monthly.df$Date <- as.Date(monthly.df$Date)
+
+# the same x limits and y limits
+y_min <- min(c(min(daily.df$Return), min(monthly.df$Return)))
+y_max <- max(c(max(daily.df$Return), max(monthly.df$Return)))
+x_min <- min(c(min(daily.df$Date), min(monthly.df$Date)))
+x_max <- max(c(max(daily.df$Date), max(monthly.df$Date)))
+
+
+# Plot each returns
+ggplot(daily.df, aes(x=Date, y=Return)) +
+  geom_line() +
+  ylim(y_min, y_max) +
+  xlim(x_min,x_max)
+  ggtitle("Daily Log Returns of BLV")
+  ylab("Log Return")
+  xlab("Date")
+
+ggplot(monthly.df, aes(x=Date, y=Return)) +
+  geom_line() +
+  ylim(y_min, y_max) +
+  xlim(x_min,x_max)
+  ggtitle("Monthly Log Returns of BLV")
+  ylab("Log Return")
+  xlab("Date")
+```
+
+
+### 1-c
+
+```{r}
+# compute the kernel density estimate
+daily.density <- density(bond.daily.return)
+
+# Plot the histogram
+hist(bond.daily.return, breaks=30 ,probability=TRUE, ylim=c(0, max(daily.density$y)), main="Distribution of Daily Log Returns", xlab="Log Return", ylab="Density")
+
+# Add the kernel density estimate
+lines(daily.density, col="black")
+
+# Overlay the normal distribution
+x <- seq(min(bond.daily.return), max(bond.daily.return), length=100)
+y <- dnorm(x, mean=daily.mean, sd=sqrt(daily.var))
+lines(x, y, col="purple")
+```
+
+
+
+### 1-d
+Repeat the previous code to plot monthly log returns
+```{r}
+# compute the kernel density estimate
+monthly.density <- density(bond.monthly.return)
+
+# Plot the histogram
+hist(bond.monthly.return, breaks=30 ,probability=TRUE, ylim=c(0, 20), main="Distribution of Monthly Log Returns", xlab="Log Return", ylab="Density")
+
+# Add the kernel density estimate
+lines(monthly.density, col="black")
+
+# Overlay the normal distribution
+x <- seq(min(bond.monthly.return), max(bond.monthly.return), length=100)
+y <- dnorm(x, mean=monthly.mean, sd=sqrt(monthly.var))
+lines(x, y, col="purple")
+
+```
+
+### 1-e
+I do not think the daily returns are approximately normally distributed. 
+For the data we got from daily returns, the skewness is not closing to 0. It is  totally different from the skewness of normal distribution, which is 0. Also, the kurtosis of daily returns is much greater than 3, which means long tails for the distribution of daily returns. Then, we could look at the histogram of daily returns. Its shape looks like the normal distribution. But the line of daily returns is not pretty match the line of the kernel density estimate (KDE). Maybe there are more extreme values than the expectation under a normal distribution. The deviations in the tails suggest no normality. 
+
+
+For the monthly returns, I think the monthly returns are approximately normally distributed, because the shape of the histogram looks like the same as the shape of the normal distribution. Also, the skewness of the monthly return is closing to 0. The kurtosis of the monthly return is more closing than the kurtosis of the daily returns. It means the tails of monthly returns is thinner than the tails of daily returns. Besides, we could look at the line of the monthly returns is approximately matching the line of KDE. In this way, I think the monthly returns are more approximately normally distributed than the daily returns.
+
+
+### Problem 2
+
+```{r}
+fund.data <- getSymbols("VWNDX", auto.assign=FALSE, from="2010-01-01", to="2023-10-01")$VWNDX.Adjusted
+
+# Calculate daily log returns
+fund.daily.return <- na.omit(Return.calculate(fund.data, method="log"))
+
+```
+
+### 2-a
+```{r}
+# calculate the daily returns
+daily_mean <- mean(fund.daily.return)
+daily_var <- var(fund.daily.return)
+daily_skew <- skewness(fund.daily.return)
+daily_kurt <- (mean((fund.daily.return - daily_mean)^4))/ (daily_var^2)
+
+# Present the results in a table
+results2 <- data.frame(
+  Statistic = c("Mean", "Variance", "Skewness", "Kurtosis"),
+  Daily = c(daily_mean, daily_var, daily_skew, daily_kurt)
+)
+
+print(results2)
+```
+
+### 2-b
+
+```{r}
+# b equals to the mean of daily returns
+b <- daily_mean
+
+# we set a function to calculate a
+cal_a <- function(nu) {
+  sqrt(daily_var * (nu - 2) / nu)
+}
+
+nu <- 6 / (daily_kurt - 3) + 4
+a <- cal_a(nu)
+cat("Estimated nu (degree of freedom):",nu,"\n")
+cat("Estimated a:",a,"\n")
+cat("Estimated b (mean):",b,"\n")
+```
+
+The Student's t-distribution is symmetric, so its skewness is always 0. It cannot be altered by a linear transformation. 
+It is possible to also match the skewness if the sample skewness also is zero (The reason of matching is the characteristic of the different distributions, not the linear transformation.).
+If the sample skewness is not zero (like the sample skewness we got from daily return (-0.83), it is impossible to match the skewness using the Student's t-distribution. 
+
+
+### 2-c
+
+```{r}
+# import the package we need to use
+library(car)
+
+# First plot
+qqPlot(coredata(fund.daily.return), main="Q-Q plot against Standard Normal Distribution", 
+       ylab="Daily Returns Quantiles", envelope=FALSE)
+
+# The other four plots
+nu_s <- c(2, 3, 4, 5)
+for (nu in nu_s) {
+  qqPlot(coredata(fund.daily.return), distribution="t", df=nu, 
+         main=paste("Q-Q plot against Student's t (nu =", nu, ")"),
+         ylab="Daily Returns Quantiles", envelope=FALSE)
+}
+
+```
+
+
+### 2-d
+Based on the QQ plots I found above, I think the student's distribution with degrees of freedom $\nu$ = 3 is the best model for the daily log returns, because it is closer to a straight line. Compared with other plots, $\nu=3$ is the closest to the straight line. 
+
+In this way, I would like to choose $\nu$ = 3 is the best model for the daily log returns.
+
+In the part (b), the degrees of freedom we got is around 4.44, which is between $\nu$ = 4 and $\nu$ = 5. The result in the plot we got does not very match to the part (b) we estimated, but is closely. 
+
+
+### Problem 3
+
+```{r}
+# get data
+BLV <- getSymbols("BLV", auto.assign=FALSE, from="2010-01-01", to="2023-10-01")$BLV.Adjusted
+VWNDX <- getSymbols("VWNDX", auto.assign=FALSE, from="2010-01-01", to="2023-10-01")$VWNDX.Adjusted
+nasdaq <- getSymbols("^IXIC", auto.assign=FALSE, from="2010-01-01",to="2023-10-01")$IXIC.Adjusted
+
+
+
+# calculate monthly log returns
+BLV.monthly <- na.omit(Return.calculate(to.monthly(BLV, OHLC=FALSE), method="log"))
+VWNDX.monthly <- na.omit(Return.calculate(to.monthly(VWNDX, OHLC=FALSE), method="log"))
+IXIC.monthly <- na.omit(Return.calculate(to.monthly(nasdaq, OHLC=FALSE), method="log"))
+
+# Compute descriptive statistics
+BLV.mean <- mean(BLV.monthly)
+BLV.sd <- sd(BLV.monthly)
+
+VWNDX.mean <- mean(VWNDX.monthly)
+VWNDX.sd <- sd(VWNDX.monthly)
+
+IXIC.mean <- mean(IXIC.monthly)
+IXIC.sd <- sd(IXIC.monthly)
+
+# Present results in a table
+results3 <- data.frame(
+  Asset = c("BLV", "VWNDX", "^IXIC"),
+  Expected_Return = c(BLV.mean, VWNDX.mean, IXIC.mean),
+  Volatility = c(BLV.sd, VWNDX.sd, IXIC.sd)
+)
+
+print(results3)
+
+```
+
+Based on the results we got, we can see that the increase of the volatility will correspond with the increase of the expected return. In the table, we can see that volatility is increasing from 0.03, 0.048, to 0.05 (BLV, VWNDX, ^IXIC), the expected return is also increasing. It means higher volatility will have higher expected returns; higher risk will have higher expected returns. I also means higher expected returns are associated with higher volatility (higher risk). 
